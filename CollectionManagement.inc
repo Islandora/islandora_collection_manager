@@ -1,10 +1,16 @@
 <?php
+/**
+ * @file
+ *  a set of utilities for collection management
+ */
 
 /**
- * collection creation form 
+ * collection creation form
+ *
  * @param array $form_state
  * @param string $parent_collection_pid
  * @param string $content_models
+ *
  * @return array
  */
 function collection_management_form(&$form_state, $this_collection_pid, $content_models) {
@@ -28,7 +34,6 @@ function collection_management_form(&$form_state, $this_collection_pid, $content
   }
   $collection_namespace = substr($this_collection_pid, 0, strpos($this_collection_pid, ":"));
 
-  $represented_content_models = get_represented_content_models($this_collection_pid);
   $item = new Fedora_Item($this_collection_pid);
   $collection_name = $item->objectProfile->objLabel;
   $new_content_models = get_content_models_as_option_array();
@@ -120,112 +125,19 @@ function collection_management_form(&$form_state, $this_collection_pid, $content
   $form['child_creation']['submit'] = array(
     '#type' => 'submit',
     '#value' => t('Create Collection'),
-    '#id' => 'create_child'
-  );
-  $form['manage_collection_policy'] = array(
-    '#title' => "Manage Collection Policies",
-    '#type' => 'fieldset',
-    '#collapsible' => TRUE,
-    '#collapsed' => TRUE,
-  );
-
-  $form['manage_collection_policy']['add'] = array(
-    '#title' => "Add Content Model to Collection Policy",
-    '#type' => 'fieldset',
-    '#collapsible' => TRUE,
-    '#collapsed' => $show_delete,
-  );
-
-  $new_options = array();
-  if (is_array($content_models) && is_array($cm_options)) {
-    $new_options = array_diff_key($content_models, $cm_options);
-  }
-
-  $form ['manage_collection_policy']['add']['content_model_to_add'] = array(
-    '#title' => "Choose Content Model",
-    '#type' => 'select',
-    '#options' => $new_options,
-    '#description' => t("Choose content model to add to this collection policy."),
-  );
-
-  $form ['manage_collection_policy']['add']['new_cp_namespace'] = array(
-    '#title' => "Choose Namespace",
-    '#type' => 'textfield',
-    '#size' => 15,
-    '#default_value' => $collection_namespace,
-    '#description' => t("Choose namespace for objects in this collection associated with this content model"),
-  );
-  $form['manage_collection_policy']['add']['submit'] = array(
-    '#type' => 'submit',
-    '#value' => t('Add Content Model to Collection Policy'),
-    '#id' => 'add_cm'
-  );
-
-  if (count($current_models_in_policy) > 0) {
-    $form['manage_collection_policy']['remove'] = array(
-      '#title' => "Delete Content Model from Collection Policy",
-      '#type' => 'fieldset',
-      '#collapsible' => TRUE,
-      '#collapsed' => TRUE,
-    );
-
-    $form ['manage_collection_policy']['remove']['content_models_to_remove'] = array(
-      '#title' => "Choose Content Model to Remove",
-      '#type' => 'checkboxes',
-      '#options' => $current_models_in_policy,
-      '#description' => t("Choose content models to remove from this collection policy."),
-    );
-
-
-    $form['manage_collection_policy']['remove']['submit'] = array(
-      '#type' => 'submit',
-      '#value' => t('Remove Content Model From Collection Policy'),
-      '#id' => 'remove_cm'
-    );
-  }
-
-
-  $form['change_cmodel'] = array(
-    '#title' => "Change Content Models",
-    '#type' => 'fieldset',
-    '#collapsible' => TRUE,
-    '#collapsed' => TRUE,
-  );
-
-  $form['change_cmodel']['titlebox'] = array(
-    '#type' => 'item',
-    '#value' => t("Change Content Models within $this_collection_pid"),
-  );
-
-  $form['change_cmodel']['current_content_model'] = array(
-    '#title' => "Choose content model to be changed",
-    '#type' => 'select',
-    '#options' => $represented_content_models,
-    '#description' => t("All objects in this collection with the selected content model will be changed."),
-  );
-  $form['change_cmodel']['new_content_model'] = array(
-    '#title' => "Choose new content model",
-    '#type' => 'select',
-    '#options' => $new_content_models,
-    '#description' => t("The new content model to be assigned to selected objects."),
-  );
-  $form['change_cmodel']['collection_pid'] = array(
-    '#type' => 'hidden',
-    '#value' => $this_collection_pid,
-  );
-  $form['change_cmodel']['submit'] = array(
-    '#type' => 'submit',
-    '#value' => t('Change Content Model Associations'),
-    '#id' => 'change_model',
+    '#id' => 'create_child',
   );
 
   return($form);
 }
 
 /**
- * collection creation form validate 
+ * collection creation form validate
+ *
  * @param array $form
+ *   The form being validated.
  * @param array $form_state
+ *   The state of the form being validate.
  */
 function collection_management_form_validate($form, &$form_state) {
   if ($form_state['clicked_button']['#id'] == 'create_child') {
@@ -269,6 +181,7 @@ function collection_management_form_validate($form, &$form_state) {
 
 /**
  * collection creation form submit
+ *
  * @global user $user
  * @param arary $form
  * @param array $form_state
@@ -292,7 +205,7 @@ function collection_management_form_submit($form, &$form_state) {
 </collection_policy>';
 
 
-  // add child collection to policy
+  // Add child collection to policy.
   if ($form_state['clicked_button']['#id'] == 'create_child') {
     $module_path = drupal_get_path('module', 'fedora_repository');
     $thumbnail = drupal_get_path('module', 'Fedora_Repository') . '/images/Crystal_Clear_filesystem_folder_grey.png';
@@ -321,7 +234,7 @@ function collection_management_form_submit($form, &$form_state) {
   }
 
 
-  // add content model to collection policy
+  // Add content model to collection policy.
   if ($form_state['clicked_button']['#id'] == 'add_cm') {
     if (!$policy) {
       $item = new Fedora_Item($collection_pid);
@@ -336,7 +249,7 @@ function collection_management_form_submit($form, &$form_state) {
     drupal_set_message("Collection model successfully added");
   }
 
-  //remove content model from collection policy
+  // Remove content model from collection policy.
   if ($form_state['clicked_button']['#id'] == 'remove_cm') {
     $candidates = $form_state['values']['content_models_to_remove'];
     $count = 0;
@@ -356,7 +269,7 @@ function collection_management_form_submit($form, &$form_state) {
   }
 
 
-  //change content model on selected objects
+  // Change content model on selected objects.
   if ($form_state['clicked_button']['#id'] == 'change_model') {
     $current_content_model = $form_state['values']['current_content_model'];
     $new_content_model = $form_state['values']['new_content_model'];
@@ -404,7 +317,8 @@ function collection_management_form_submit($form, &$form_state) {
 }
 
 /**
- * deletes PID 
+ * deletes PID
+ *
  * @param string $pid
  */
 function delete_objects_as_batch($pid) {
@@ -416,7 +330,9 @@ function delete_objects_as_batch($pid) {
 
 /**
  * removes association of this object to this collection
+ *
  * @param string $pid
+ * @param string $collection_pid
  */
 function remove_collection_association($pid, $collection_pid) {
   module_load_include('inc', 'fedora_repository', 'api/fedora_item');
@@ -425,35 +341,9 @@ function remove_collection_association($pid, $collection_pid) {
 }
 
 /**
- * returns content models associated with all objects in a collection
- * @param string $pid
- * @return arrau
+ *
+ * @param unknown_type $collection_pid
  */
-function get_represented_content_models($pid) {
-  module_load_include('inc', 'fedora_repository', 'api/fedora_utils');
-  module_load_include('inc', 'fedora_repository', 'api/fedora_item');
-  $query = "select \$model from <#ri>
-where (\$object <info:fedora/fedora-system:def/relations-external#isMemberOf> <info:fedora/$pid>
-       or \$object <info:fedora/fedora-system:def/relations-external#isMemberOfCollection> <info:fedora/$pid>)
-       and \$object <info:fedora/fedora-system:def/model#hasModel> \$model";
-  $query = htmlentities(urlencode($query));
-  $content = '';
-  $url = variable_get('fedora_repository_url', 'http://localhost:8080/fedora/risearch');
-  $url .= "?type=tuples&flush=TRUE&format=csv&limit=$limit&offset=$offset&lang=itql&stream=on&query=" . $query;
-  $content .= do_curl($url);
-  $results = explode("\n", $content);
-  $model_pids = preg_replace('/^info:fedora\/|"model"/', '', $results);
-  $represented_models = array();
-  foreach ($model_pids as $model_pid) {
-    if ($model_pid && $model_pid != 'fedora-system:FedoraObject-3.0') {
-      $item = new fedora_item($model_pid);
-      $label = $item->objectProfile->objLabel;
-      $represented_models[$model_pid] = "$model_pid ~ $label";
-    }
-  }
-  return $represented_models;
-}
-
 function get_child_collections($collection_pid) {
 
   $query = <<<EOD
@@ -472,23 +362,4 @@ EOD;
   $lines = preg_replace('/info:fedora\/|"object"/', '', $results);
   $collection_pids = array_values(array_filter($lines));
   return $collection_pids;
-}
-
-function Islandora_collections_get_collection_from_pid($pid) {
-
-  module_load_include('inc', 'fedora_repository', 'api/fedora_utils');
-  $query_string = 'select  $parent  from <#ri>
-		where ($object <fedora-rels-ext:isMemberOf> $parent
-    or $object <fedora-rels-ext:isMemberOfCollection> $parent)
-		and $object <dc:identifier> \'' . $pid . '\'
-		order by $object';
-
-  $query_string = htmlentities(urlencode($query_string));
-  $url = variable_get('fedora_repository_url', 'http://localhost:8080/fedora/risearch');
-  $url .= '?type=tuples&flush=true&format=csv&limit=13000&lang=itql&stream=on&query=' . $query_string;
-  $content = do_curl($url, TRUE);
-  $results = explode("\n", $content);
-  $object_pids = preg_replace('/^info:fedora\/|"parent"| /', '', $results);
-  $object_pids = array_values(array_filter($object_pids));
-  return $object_pids;
 }

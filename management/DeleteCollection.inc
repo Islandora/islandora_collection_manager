@@ -1,27 +1,42 @@
 <?php
+/**
+ * @file
+ *   Holds the code related to deleting objects/collections for this module.
+ */
 
 /**
+ * The form for deleting collections and their members.
  *
  * @param array $form_state
+ *   The state of the form
  * @param string $pid
+ *   The collection PID
  *
- * @return string
+ * @return array
+ *   The completed form array.
  */
 function islandora_collection_deletion_form(&$form_state, $pid) {
   module_load_include('inc', 'fedora_repository', 'api/fedora_utils');
   module_load_include('inc', 'islandora_collection_manager', 'CollectionManagerTable');
+  module_load_include('inc', 'islandora_collection_manager', 'CollectionManagement');
   $potential_collections = get_collections_as_option_array();
   $table = islandora_collection_table($pid);
   $deletion_message = ($table) ? "Delete Members of this Collection" : "Delete Collection";
   $submit_text_message = ($table) ? "Delete Selected Objects" : "Delete Collection";
-
+    $path = drupal_get_path('module', 'islandora_collection_manager');
+    drupal_add_js($path . '/js/collection.js?stopcache');
+    drupal_add_css($path . '/css/collection.css');
 
   $form = array();
+
+  $form['link'] = array(
+    '#type' => 'item',
+    '#value' => l(t("Return to collection view"), "fedora/repository/$pid"),
+  );
+
   $form['collection_delete'] = array(
     '#title' => $deletion_message,
     '#type' => 'fieldset',
-    '#collapsible' => TRUE,
-    '#collapsed' => TRUE,
   );
 
   if ($table) {
@@ -54,19 +69,28 @@ function islandora_collection_deletion_form(&$form_state, $pid) {
   if (user_access('delete entire collections')) {
     return $form;
   }
-
 }
 
+/**
+ * The submit hook for the deletion form. Actualy deletes objects
+ *
+ * @param array $form
+ *   The form to handle.
+ * @param array $form_state
+ *   The state of the form to handle
+ */
 function islandora_collection_deletion_form_submit($form, &$form_state) {
   global $user;
   module_load_include('inc', 'fedora_repository', 'api/fedora_item');
   module_load_include('inc', 'fedora_repository', 'api/fedora_collection');
+  module_load_include('inc', 'fedora_repository', 'api/fedora_utils');
+
   $collection_pid = $form_state['values']['current'];
-  $parents = Islandora_collections_get_collection_from_pid($collection_pid);
-  $collection_pid = $form_state['values']['current'];
+  $parents = get_parent_collections_from_pid($collection_pid);
+
   if ($form_state['values']['delete_root'] == 1) {
     delete_root_collection($collection_pid);
-    drupal_goto("fedora/repository/" .$parents[0]);
+    drupal_goto("fedora/repository/" . $parents[0]);
   }
 
   $child_collections = get_child_collections($collection_pid);
@@ -83,26 +107,50 @@ function islandora_collection_deletion_form_submit($form, &$form_state) {
     }
   }
   if (!empty($populated_child_collections)) {
-    $conflict = false;
+    $conflict = FALSE;
     foreach ($populated_child_collections as $collection) {
       if (in_array($collection, $pids)) {
-        $conflict = true;
+        $conflict = TRUE;
         drupal_set_message("Populated child collections were not deleted.");
       }
     }
   }
   $pids_to_delete = array_diff($pids, $populated_child_collections);
+  $batch = array(
+    'title' => "Deleting Selected Objects from collection",
+    'progress_message' => t('Deleted @current objects out of @total.'),
+    'operations' => array(),
+    'file' => drupal_get_path('module', 'islandora_collection_manager') . '/management/DeleteCollection.inc',
+  );
 
   foreach ($pids_to_delete as $pid_to_delete) {
-    $item = new Fedora_Item($pid_to_delete);
-    $item->purge("Purged by " . $user->name);
+    $batch['operations'][] = array('collection_manager_delete', array($pid_to_delete));
   }
-  drupal_goto("fedora/repository/" .$parents[0]);
+  batch_set($batch);
 }
 
+/**
+ * This function will delete a collection.
+ *
+ * @param string $pid
+ *   The PID of the item to purge.
+ */
 function delete_root_collection($pid) {
   module_load_include('inc', 'fedora_repository', 'api/fedora_item');
   $item = new Fedora_Item($pid);
   $item->purge();
   drupal_set_message("$pid deleted.");
+}
+
+/**
+ *  This function will delete an object.
+ *
+ * @param string $pid
+ *   The PID of the item to purge.
+ */
+function collection_manager_delete($pid) {
+  module_load_include('inc', 'fedora_repository', 'api/fedora_item');
+  $item = new Fedora_Item($pid);
+  $item->purge("Purged by " . $user->name);
+  $item->forget();
 }
