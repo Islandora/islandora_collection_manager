@@ -1,5 +1,5 @@
 name = Islandora Collection Manager
-description = Provides additional tabs in Collection views
+description = Provides additional tabs in Collection views.
 dependencies[] = fedora_repository
 package = Islandora Tools
 version = 6.x-13.1
